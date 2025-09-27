@@ -17,8 +17,10 @@ export  class UserGetController {
 
     homePage = (req, res) => {
         const email = req.session.userEmail;
+        console.log('Homepage session check - email:', email); // Debug
+        
         if (!email) {
-            return res.status(404).render("signin",{message:"Please sign in to view the homepage"});
+            return res.status(401).render("signin",{message:"Please sign in to view the homepage"});
         }
         res.render("homepage");
     }
@@ -73,42 +75,41 @@ export  class UserPostController {
     };
 
     //sign in
-    signInUser = async (req, res) => {
-        const { email, password } = req.body;
-        //Recaptcha
-        const recaptcha = req.body['g-recaptcha-response'];
-
-        if (recaptcha === undefined || recaptcha === '' || recaptcha === null) {
-            return res.status(404).render("signin",{message:"Please select captcha"});
-        }
-        // const secretKey = process.env.RECAPTCHA_SECRET_KEY;
-        // const url = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptcha}`;
-        // const response = await fetch(url, {
-        //     method: 'POST',
-        //     headers: {
-        //         "Content-Type": "application/x-www-form-urlencoded; charset=utf-8"
-        //     }
-        // });
-
-        try {
-            const existingUser = await User.findOne({ email: email});
-            
-            if (!existingUser) 
-            return res.status(404).render("signin",{message:"User doesn't exist"});
-        
-            const isPasswordCorrect = await bcrypt.compare(password, existingUser.password);
-            
-            if (!isPasswordCorrect)
-                return res.status(400).render("signin",{message:"Invalid credentials || Incorrect Password"});
-            req.session.userEmail = email;
-            res.redirect('/user/homepage');
-            
-        }
-        catch (error) {
-            res.status(500).render("signin",{message:error.message});
-            
-        }
+    // Remove or properly handle reCAPTCHA
+signInUser = async (req, res) => {
+    const { email, password } = req.body;
+    
+    // Either remove reCAPTCHA check entirely or uncomment and fix the validation:
+    /*
+    const recaptcha = req.body['g-recaptcha-response'];
+    if (recaptcha === undefined || recaptcha === '' || recaptcha === null) {
+        return res.status(404).render("signin",{message:"Please select captcha"});
     }
+    */
+
+    try {
+        const existingUser = await User.findOne({ email: email });
+        
+        if (!existingUser) 
+            return res.status(404).render("signin",{message:"User doesn't exist"});
+    
+        const isPasswordCorrect = await bcrypt.compare(password, existingUser.password);
+        
+        if (!isPasswordCorrect)
+            return res.status(400).render("signin",{message:"Invalid credentials || Incorrect Password"});
+        
+        // Set session properly
+        req.session.userEmail = email;
+        req.session.userId = existingUser._id; // Also store user ID
+        
+        console.log('Session after login:', req.session); // Debug log
+        
+        res.redirect('/user/homepage');
+    }
+    catch (error) {
+        res.status(500).render("signin",{message:error.message});
+    }
+}
 
     //forgot password
     forgotPassword = async (req, res) => {

@@ -14,15 +14,26 @@ import authrouter from "./routes/authRoutes.js"; // Importing authentication rou
 dotenv.config(); // Loading environment variables from .env file
 const app = express(); // Initializing express application
 
-//SESSION
+// SESSION - Improved configuration
 app.use(
   session({
-    secret: "SecretKey",
-    resave: false,
+    secret: process.env.SESSION_SECRET || "SecretKey", // Use env variable
+    resave: true, // Changed to true
     saveUninitialized: true,
-    cookie: { secure: false },
+    cookie: { 
+      secure: false, // Set to true if using HTTPS
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    },
+    // store: // Consider using MongoDB store for production
   })
 );
+
+// Add this after session middleware
+app.use((req, res, next) => {
+  console.log('Session ID:', req.sessionID);
+  console.log('Session data:', req.session);
+  next();
+});
 
 //MIDDLEWARE
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -37,8 +48,7 @@ passport.use(
     {
       clientID: process.env.CLIENT_ID,
       clientSecret: process.env.CLIENT_SECRET,
-      callbackURL:
-        "https://nodejs-authentication-system-l2pu.onrender.com/auth/google/callback",
+      callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:3000/auth/google/callback",
       scope: ["profile", "email"],
     },
     function (accessToken, refreshToken, profile, callback) {
@@ -53,6 +63,14 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser((user, done) => {
   done(null, user);
+});
+
+app.use((req, res, next) => {
+    res.locals.studentInfo = {
+        id: '22632631', 
+        name: 'Nguyễn Minh Anh'
+    };
+    next();
 });
 
 // Set Templates
